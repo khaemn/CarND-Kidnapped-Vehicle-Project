@@ -41,7 +41,8 @@ int main()
   double sensor_range_m = 50;   // Sensor range [m]
 
   // GPS measurement uncertainty [x [m], y [m], theta [rad]]
-  double sigma_pos[3] = {0.3, 0.3, 0.01};
+
+  const Sigmas sigma_pos {0.3, 0.3, 0.01};
   // Landmark measurement uncertainty [x [m], y [m]]
   double sigma_landmark[2] = {0.3, 0.3};
 
@@ -102,7 +103,7 @@ int main()
       double previous_velocity = std::stod(j[DATA_IDX]["previous_velocity"].get<string>());
       double previous_yawrate  = std::stod(j[DATA_IDX]["previous_yawrate"].get<string>());
 
-      filter.prediction(delta_t_sec, sigma_pos, previous_velocity, previous_yawrate);
+      filter.predict(delta_t_sec, sigma_pos, previous_velocity, previous_yawrate);
     }
 
     // receive noisy observation data from the simulator
@@ -138,7 +139,7 @@ int main()
 
     // Calculate and output the average weighted error of the particle
     //   filter over all time steps so far.
-    vector<Particle> particles      = filter.particles;
+    vector<Particle> particles      = filter.particles();
     size_t           num_particles  = particles.size();
     double           highest_weight = -1.0;
     Particle         best_particle;

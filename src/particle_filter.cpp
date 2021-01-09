@@ -17,11 +17,12 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <random>
 
 using std::string;
 using std::vector;
 
-void ParticleFilter::init(double x, double y, double theta, double std[])
+void ParticleFilter::init(double x, double y, double theta, Sigmas sigmas)
 {
   /**
    * TODO: Set the number of particles. Initialize all particles to
@@ -31,15 +32,34 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
    * NOTE: Consult particle_filter.h for more information about this method
    *   (and others in this file).
    */
+  std::default_random_engine gen;
+
+  particles_.reserve(num_particles_);
+  weights_.reserve(num_particles_);
+
+  using std::normal_distribution;
+
+  normal_distribution<double> dist_x(x, sigmas.x);
+  normal_distribution<double> dist_y(y, sigmas.y);
+  normal_distribution<double> dist_theta(theta, sigmas.theta);
+
+  for (size_t i{0}; i < num_particles_; ++i)
+  {
+    particles_.emplace_back(
+        Particle{int(i), dist_x(gen), dist_y(gen), dist_theta(gen), 1.0, {}, {}, {}});
+    weights_.emplace_back(1.0);
+  }
+
+  is_initialized_ = true;
 }
 
-void ParticleFilter::init(int particle_count, double x, double y, double theta, double std[])
+void ParticleFilter::init(int particle_count, double x, double y, double theta, Sigmas sigmas)
 {
-  num_particles_ = particle_count;
-  init(x, y, theta, std);
+  num_particles_ = size_t(particle_count);
+  init(x, y, theta, sigmas);
 }
 
-void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate)
+void ParticleFilter::predict(double delta_t, Sigmas sigmas, double velocity, double yaw_rate)
 {
   /**
    * TODO: Add measurements to each particle and add random Gaussian noise.
@@ -133,4 +153,9 @@ string ParticleFilter::getSenseCoord(Particle best, string coord)
   string s = ss.str();
   s        = s.substr(0, s.length() - 1);  // get rid of the trailing space
   return s;
+}
+
+const std::vector<Particle> &ParticleFilter::particles()
+{
+    return particles_;
 }

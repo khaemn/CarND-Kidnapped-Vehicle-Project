@@ -14,6 +14,13 @@
 #include <string>
 #include <vector>
 
+struct Sigmas
+{
+  const double x;
+  const double y;
+  const double theta;
+};
+
 struct Particle
 {
   int                 id;
@@ -30,8 +37,8 @@ class ParticleFilter
 {
 public:
   ParticleFilter()
-    : num_particles_(-1)
-    , is_initialized(false)
+    : num_particles_(0)
+    , is_initialized_(false)
   {}
 
   ~ParticleFilter() = default;
@@ -45,8 +52,8 @@ public:
    * @param std[] Array of dimension 3 [standard deviation of x [m],
    *   standard deviation of y [m], standard deviation of yaw [rad]]
    */
-  void init(double x, double y, double theta, double std[]);
-  void init(int particle_count, double x, double y, double theta, double std[]);
+  void init(double x, double y, double theta, Sigmas sigmas);
+  void init(int particle_count, double x, double y, double theta, Sigmas sigmas);
 
   /**
    * prediction Predicts the state for the next time step
@@ -57,7 +64,7 @@ public:
    * @param velocity Velocity of car from t to t+1 [m/s]
    * @param yaw_rate Yaw rate of car from t to t+1 [rad/s]
    */
-  void prediction(double delta_t, double std_pos[], double velocity, double yaw_rate);
+  void predict(double delta_t, Sigmas sigmas, double velocity, double yaw_rate);
 
   /**
    * dataAssociation Finds which observations correspond to which landmarks
@@ -99,7 +106,7 @@ public:
    */
   const bool initialized() const
   {
-    return is_initialized;
+    return is_initialized_;
   }
 
   /**
@@ -109,17 +116,19 @@ public:
   std::string getSenseCoord(Particle best, std::string coord);
 
   // Set of current particles
-  std::vector<Particle> particles;
+  const std::vector<Particle> &particles();
 
 private:
+  std::vector<Particle> particles_;
+
   // Number of particles to draw
-  int num_particles_;
+  size_t num_particles_;
 
   // Flag, if filter is initialized
-  bool is_initialized;
+  bool is_initialized_;
 
   // Vector of weights of all particles
-  std::vector<double> weights;
+  std::vector<double> weights_;
 };
 
 #endif  // PARTICLE_FILTER_H_
