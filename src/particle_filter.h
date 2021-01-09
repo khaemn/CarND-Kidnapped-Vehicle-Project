@@ -29,7 +29,11 @@ class ParticleFilter {
  public:
   // Constructor
   // @param num_particles Number of particles
-  ParticleFilter() : num_particles(0), is_initialized(false) {}
+  ParticleFilter() : num_particles_(0), is_initialized(false) {}
+  ParticleFilter(int particle_count)
+    : num_particles_(particle_count)
+    , is_initialized(false)
+  {}
 
   // Destructor
   ~ParticleFilter() {}
@@ -44,6 +48,10 @@ class ParticleFilter {
    *   standard deviation of y [m], standard deviation of yaw [rad]]
    */
   void init(double x, double y, double theta, double std[]);
+  void init(int particle_count, double x, double y, double theta, double std[]){
+      num_particles_ = particle_count;
+      init(x, y, theta, std);
+  }
 
   /**
    * prediction Predicts the state for the next time step
@@ -113,7 +121,7 @@ class ParticleFilter {
 
  private:
   // Number of particles to draw
-  int num_particles; 
+  int num_particles_;
   
   // Flag, if filter is initialized
   bool is_initialized;
