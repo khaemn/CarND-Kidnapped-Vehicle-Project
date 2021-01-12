@@ -13,6 +13,7 @@
 
 #include <string>
 #include <vector>
+#include <random>
 
 struct Sigmas
 {
@@ -83,7 +84,7 @@ public:
    * @param observations Vector of landmark observations
    * @param map Map class containing map landmarks
    */
-  void updateWeights(double sensor_range, double std_landmark[],
+  void updateWeights(double sensor_range, Sigmas std_landmark,
                      const std::vector<LandmarkObs> &observations, const Map &map_landmarks);
 
   /**
@@ -129,6 +130,9 @@ private:
 
   // Vector of weights of all particles
   std::vector<double> weights_;
+
+  // Member random generator
+  std::default_random_engine rnd_;
 };
 
 #endif  // PARTICLE_FILTER_H_

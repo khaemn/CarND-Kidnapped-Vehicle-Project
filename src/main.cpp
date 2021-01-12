@@ -44,7 +44,7 @@ int main()
 
   const Sigmas sigma_pos {0.3, 0.3, 0.01};
   // Landmark measurement uncertainty [x [m], y [m]]
-  double sigma_landmark[2] = {0.3, 0.3};
+  const Sigmas sigma_landmark {0.3, 0.3, 0.0};
 
   // Read map data
   Map map;

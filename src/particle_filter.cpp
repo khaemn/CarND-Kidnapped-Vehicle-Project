@@ -17,10 +17,10 @@
 #include <random>
 #include <string>
 #include <vector>
-#include <random>
 
 using std::string;
 using std::vector;
+using std::normal_distribution;
 
 void ParticleFilter::init(double x, double y, double theta, Sigmas sigmas)
 {
@@ -32,12 +32,8 @@ void ParticleFilter::init(double x, double y, double theta, Sigmas sigmas)
    * NOTE: Consult particle_filter.h for more information about this method
    *   (and others in this file).
    */
-  std::default_random_engine gen;
-
   particles_.reserve(num_particles_);
   weights_.reserve(num_particles_);
-
-  using std::normal_distribution;
 
   normal_distribution<double> dist_x(x, sigmas.x);
   normal_distribution<double> dist_y(y, sigmas.y);
@@ -46,7 +42,7 @@ void ParticleFilter::init(double x, double y, double theta, Sigmas sigmas)
   for (size_t i{0}; i < num_particles_; ++i)
   {
     particles_.emplace_back(
-        Particle{int(i), dist_x(gen), dist_y(gen), dist_theta(gen), 1.0, {}, {}, {}});
+        Particle{int(i), dist_x(rnd_), dist_y(rnd_), dist_theta(rnd_), 1.0, {}, {}, {}});
     weights_.emplace_back(1.0);
   }
 
@@ -68,6 +64,40 @@ void ParticleFilter::predict(double delta_t, Sigmas sigmas, double velocity, dou
    *  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
    *  http://www.cplusplus.com/reference/random/default_random_engine/
    */
+  std::default_random_engine gen;
+  for (auto &particle : particles_)
+  {
+    const auto d_thetha{delta_t * yaw_rate};
+    const auto old_thetha{particle.theta};
+    const auto new_thetha{old_thetha + d_thetha};
+    auto       new_x{particle.x};
+    auto       new_y{particle.y};
+
+    const auto cos_new_thetha{cos(new_thetha)};
+    const auto sin_new_thetha{cos(new_thetha)};
+
+    if (fabs(yaw_rate) <= 0.01)
+    {
+      // If yaw rate is negligible, x and y are updated according to the traveled distance.
+      const auto traveled_distance{velocity * delta_t};
+      new_x += traveled_distance * cos_new_thetha;
+      new_y += traveled_distance * sin_new_thetha;
+    }
+    else
+    {
+      const double rotation{velocity * yaw_rate};
+      new_x += rotation * (sin_new_thetha - sin(old_thetha));
+      new_y += rotation * (cos(old_thetha) - cos_new_thetha);
+    }
+
+    normal_distribution<double> dist_x(new_x, sigmas.x);
+    normal_distribution<double> dist_y(new_y, sigmas.y);
+    normal_distribution<double> dist_theta(new_thetha, sigmas.theta);
+
+    particle.x     = dist_x(rnd_);
+    particle.y     = dist_y(rnd_);
+    particle.theta = dist_theta(rnd_);
+  }
 }
 
 void ParticleFilter::dataAssociation(vector<LandmarkObs>  predicted,
@@ -83,7 +113,7 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs>  predicted,
    */
 }
 
-void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
+void ParticleFilter::updateWeights(double sensor_range, Sigmas std_landmark,
                                    const vector<LandmarkObs> &observations,
                                    const Map &                map_landmarks)
 {
@@ -157,5 +187,5 @@ string ParticleFilter::getSenseCoord(Particle best, string coord)
 
 const std::vector<Particle> &ParticleFilter::particles()
 {
-    return particles_;
+  return particles_;
 }
