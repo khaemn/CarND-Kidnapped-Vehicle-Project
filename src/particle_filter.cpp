@@ -32,14 +32,14 @@ void ParticleFilter::init(double x, double y, double theta, Sigmas sigmas)
    * NOTE: Consult particle_filter.h for more information about this method
    *   (and others in this file).
    */
-  particles_.reserve(num_particles_);
-  weights_.reserve(num_particles_);
+  particles_.reserve(total_particles_);
+  weights_.reserve(total_particles_);
 
   normal_distribution<double> dist_x(x, sigmas.x);
   normal_distribution<double> dist_y(y, sigmas.y);
   normal_distribution<double> dist_theta(theta, sigmas.theta);
 
-  for (size_t i{0}; i < num_particles_; ++i)
+  for (size_t i{0}; i < total_particles_; ++i)
   {
     particles_.emplace_back(
         Particle{int(i), dist_x(rnd_), dist_y(rnd_), dist_theta(rnd_), 1.0, {}, {}, {}});
@@ -51,7 +51,7 @@ void ParticleFilter::init(double x, double y, double theta, Sigmas sigmas)
 
 void ParticleFilter::init(int particle_count, double x, double y, double theta, Sigmas sigmas)
 {
-  num_particles_ = size_t(particle_count);
+  total_particles_ = size_t(particle_count);
   init(x, y, theta, sigmas);
 }
 
@@ -130,6 +130,34 @@ void ParticleFilter::updateWeights(double sensor_range, Sigmas std_landmark,
    *   and the following is a good resource for the actual equation to implement
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
+
+    // NOTE! This is incorrect, as the association was not performed.
+  const auto gauss_norm{1. / 2 * M_PI * std_landmark.x * std_landmark.y};
+  const auto doubled_sig_square_x{2. * pow(std_landmark.x, 2.)};
+  const auto doubled_sig_square_y{2. * pow(std_landmark.y, 2.)};
+  for (size_t i{0}; i < total_particles_; ++i)
+  {
+    auto& particle = particles_[i];
+    const auto x_part{particle.x};
+    const auto y_part{particle.y};
+    const auto cos_theta{cos(particle.theta)};
+    const auto sin_theta{sin(particle.theta)};
+
+    double weight = 1.0;
+    for (const auto &observation : observations)
+    {
+      const auto x_obs{observation.x};
+      const auto y_obs{observation.y};
+      const auto x_obs_on_map = x_part + (cos_theta * x_obs) - (sin_theta * y_obs);
+      const auto y_obs_on_map = y_part + (sin_theta * x_obs) + (cos_theta * y_obs);
+      const auto x_variance   = pow((x_part + x_obs_on_map), 2.) / doubled_sig_square_x;
+      const auto y_variance   = pow((y_part + y_obs_on_map), 2.) / doubled_sig_square_y;
+      const auto obs_weight   = gauss_norm * exp(-1. * (x_variance + y_variance));
+      weight *= obs_weight;
+    }
+    particle.weight = weight;
+    weights_[i] = weight;
+  }
 }
 
 void ParticleFilter::resample()
@@ -140,6 +168,14 @@ void ParticleFilter::resample()
    * NOTE: You may find std::discrete_distribution helpful here.
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
+  std::discrete_distribution<size_t> distr(weights_.begin(), weights_.end());
+  std::vector<Particle>              resampled;
+  resampled.reserve(total_particles_);
+  for (size_t i{0}; i < total_particles_; ++i)
+  {
+    resampled.emplace_back(particles_[distr(rnd_)]);
+  }
+  particles_ = std::move(resampled);
 }
 
 void ParticleFilter::SetAssociations(Particle &particle, const vector<int> &associations,

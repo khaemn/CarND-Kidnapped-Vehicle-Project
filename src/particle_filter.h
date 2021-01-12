@@ -38,7 +38,7 @@ class ParticleFilter
 {
 public:
   ParticleFilter()
-    : num_particles_(0)
+    : total_particles_(0)
     , is_initialized_(false)
   {}
 
@@ -123,7 +123,7 @@ private:
   std::vector<Particle> particles_;
 
   // Number of particles to draw
-  size_t num_particles_;
+  size_t total_particles_;
 
   // Flag, if filter is initialized
   bool is_initialized_;
