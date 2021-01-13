@@ -21,6 +21,8 @@
 using std::string;
 using std::vector;
 using std::normal_distribution;
+using std::endl;
+using std::cout;
 
 void ParticleFilter::init(double x, double y, double theta, Sigmas sigmas)
 {
@@ -113,6 +115,30 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs>  predicted,
    */
 }
 
+// Returns all landmarks that lies within the rectangular region,
+// set by upper left and lower right corners. IDs of the corner
+// points are being ignored.
+// Note: the map records can be sorted along X axis to speed up search.
+vector<LandmarkObs> getLandmarksInRegion(const Map &map_landmarks, LandmarkObs top_left,
+                                         LandmarkObs bottom_right)
+{
+  vector<LandmarkObs> found;
+  if (top_left.x >= bottom_right.x || top_left.y <= bottom_right.y)
+  {
+    return found;
+  }
+  // TODO: speed it up.
+  for (const auto &landmark : map_landmarks.landmark_list)
+  {
+    if (landmark.x_f >= float(top_left.x) && landmark.y_f <= float(top_left.y) &&
+        landmark.x_f <= float(bottom_right.x) && landmark.y_f <= float(bottom_right.y))
+    {
+      found.emplace_back(LandmarkObs{landmark.id_i, double(landmark.x_f), double(landmark.y_f)});
+    }
+  }
+  return found;
+}
+
 void ParticleFilter::updateWeights(double sensor_range, Sigmas std_landmark,
                                    const vector<LandmarkObs> &observations,
                                    const Map &                map_landmarks)
@@ -143,6 +169,13 @@ void ParticleFilter::updateWeights(double sensor_range, Sigmas std_landmark,
     const auto cos_theta{cos(particle.theta)};
     const auto sin_theta{sin(particle.theta)};
 
+    LandmarkObs sensor_field_top_left {0, x_part - sensor_range, y_part + sensor_range};
+    LandmarkObs sensor_field_bot_right {0, x_part + sensor_range, y_part - sensor_range};
+
+    const auto predicted_landmarks =
+        getLandmarksInRegion(map_landmarks, sensor_field_top_left, sensor_field_bot_right);
+    vector<LandmarkObs> observations_on_map;
+
     double weight = 1.0;
     for (const auto &observation : observations)
     {
@@ -150,13 +183,32 @@ void ParticleFilter::updateWeights(double sensor_range, Sigmas std_landmark,
       const auto y_obs{observation.y};
       const auto x_obs_on_map = x_part + (cos_theta * x_obs) - (sin_theta * y_obs);
       const auto y_obs_on_map = y_part + (sin_theta * x_obs) + (cos_theta * y_obs);
-      const auto x_variance   = pow((x_part + x_obs_on_map), 2.) / doubled_sig_square_x;
+      observations_on_map.emplace_back(
+          LandmarkObs{LandmarkObs::EMPTY_ID, x_obs_on_map, y_obs_on_map});
+    }
+
+    /*
+    cout << "Particle " << particle.coordsToString() << endl
+         << "Observes within sensor range " << sensor_range << ":" << endl;
+    for (const auto &obs : observations_on_map)
+    {
+      cout << obs.toString() << endl;
+    }
+    cout << "Predicted landmarks are:" << endl;
+    for (const auto &obs : predicted_landmarks)
+    {
+      cout << obs.toString() << endl;
+    }
+    cout << endl;
+    */
+    // Associate
+
+    // And now calculate particle's weight
+    /*      const auto x_variance   = pow((x_part + x_obs_on_map), 2.) / doubled_sig_square_x;
       const auto y_variance   = pow((y_part + y_obs_on_map), 2.) / doubled_sig_square_y;
       const auto obs_weight   = gauss_norm * exp(-1. * (x_variance + y_variance));
       weight *= obs_weight;
-    }
-    particle.weight = weight;
-    weights_[i] = weight;
+    */
   }
 }
 

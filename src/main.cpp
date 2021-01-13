@@ -11,7 +11,7 @@ using nlohmann::json;
 using std::string;
 using std::vector;
 
-static constexpr int PARTICLE_COUNT = 1000;
+static constexpr int PARTICLE_COUNT = 20;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -53,6 +53,13 @@ int main()
     std::cout << "Error: Could not open map file" << std::endl;
     return -1;
   }
+  // To speed up landmark search within the map, I sort them at least
+  // by 'x' coordinate. It costs nothing in memory as the vector remains
+  // the same, but allow a binary search at least in one direction.
+  std::sort(map.landmark_list.begin(), map.landmark_list.end(),
+            [](const Map::single_landmark_s &l, const Map::single_landmark_s &r) {
+              return l.x_f < r.x_f;
+            });
 
   ParticleFilter filter;
 

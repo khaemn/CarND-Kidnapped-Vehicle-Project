@@ -32,6 +32,12 @@ struct Particle
   std::vector<int>    associations;
   std::vector<double> sense_x;
   std::vector<double> sense_y;
+
+  std::string coordsToString() const
+  {
+    using std::to_string;
+    return {"[ " + to_string(x) + " ; " + to_string(y) + " ](" + to_string(id) + ")"};
+  }
 };
 
 class ParticleFilter
