@@ -10,6 +10,7 @@
 #define HELPER_FUNCTIONS_H_
 
 #include <math.h>
+#include <limits>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -42,7 +43,7 @@ struct ground_truth {
  * Struct representing one landmark observation measurement.
  */
 struct LandmarkObs {
-  static constexpr int EMPTY_ID{-1};
+  static constexpr int EMPTY_ID{std::numeric_limits<int>::max()};
   int    id;  // Id of matching landmark in the map.
   double x;   // Local (vehicle coords) x position of landmark observation [m]
   double y;   // Local (vehicle coords) y position of landmark observation [m]

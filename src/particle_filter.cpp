@@ -113,6 +113,38 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs>  predicted,
    *   probably find it useful to implement this method and use it as a helper
    *   during the updateWeights phase.
    */
+  auto distance = [](const LandmarkObs &a, const LandmarkObs &b) {
+    return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));
+  };
+  for (const auto &landmark : predicted)
+  {
+    double min_dist = std::numeric_limits<double>::max();
+    int closest_id = LandmarkObs::EMPTY_ID;
+    for (auto &observation : observations)
+    {
+      const auto dist = distance(landmark, observation);
+      cout << "Distance between " << landmark.toString() << " and " << observation.toString()
+           << " is " << dist << endl;
+      if (dist < min_dist)
+      {
+        min_dist       = dist;
+        observation.id = landmark.id;
+        closest_id = landmark.id;
+      }
+    }
+    cout << "Closest is " << closest_id << " with distance " << min_dist << endl << endl;
+  }
+  // As the default (empty) ID is guaranteed to be larger then any other,
+  // after the sorting the tail of this vector would contain unassociated
+  // pbservations.
+  std::sort(observations.begin(), observations.end(),
+            [](const LandmarkObs &a, const LandmarkObs &b) { return a.id < b.id; });
+  // If there are more observations, that landmarks, we discard all the rest.
+  const size_t length_diff = observations.size() - predicted.size();
+  if (length_diff > 0)
+  {
+    observations.erase(observations.begin() + long(length_diff), observations.end());
+  }
 }
 
 // Returns all landmarks that lies within the rectangular region,
@@ -187,6 +219,7 @@ void ParticleFilter::updateWeights(double sensor_range, Sigmas std_landmark,
           LandmarkObs{LandmarkObs::EMPTY_ID, x_obs_on_map, y_obs_on_map});
     }
 
+    dataAssociation(predicted_landmarks, observations_on_map);
     /*
     cout << "Particle " << particle.coordsToString() << endl
          << "Observes within sensor range " << sensor_range << ":" << endl;
