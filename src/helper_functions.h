@@ -53,6 +53,15 @@ struct LandmarkObs {
     using std::to_string;
     return {"[ " + to_string(x) + " ; " + to_string(y) + " ](" + to_string(id) + ")"};
   }
+
+  inline bool operator<(const LandmarkObs &other) const
+  {
+    return id < other.id;
+  };
+  inline bool operator<(int other_id) const
+  {
+    return id < other_id;
+  };
 };
 
 /**

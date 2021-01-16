@@ -41,10 +41,13 @@ void ParticleFilter::init(double x, double y, double theta, Sigmas sigmas)
   normal_distribution<double> dist_y(y, sigmas.y);
   normal_distribution<double> dist_theta(theta, sigmas.theta);
 
+  cout << "Init X " << x << "   Y " << y << "   theta " << theta << endl;
+
   for (size_t i{0}; i < total_particles_; ++i)
   {
     particles_.emplace_back(
         Particle{int(i), dist_x(rnd_), dist_y(rnd_), dist_theta(rnd_), 1.0, {}, {}, {}});
+    cout << "Init Particle " << particles_.back().coordsToString() << endl;
     weights_.emplace_back(1.0);
   }
 
@@ -87,7 +90,7 @@ void ParticleFilter::predict(double delta_t, Sigmas sigmas, double velocity, dou
     }
     else
     {
-      const double rotation{velocity * yaw_rate};
+      const auto rotation{velocity * yaw_rate};
       new_x += rotation * (sin_new_thetha - sin(old_thetha));
       new_y += rotation * (cos(old_thetha) - cos_new_thetha);
     }
@@ -113,38 +116,33 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs>  predicted,
    *   probably find it useful to implement this method and use it as a helper
    *   during the updateWeights phase.
    */
-  auto distance = [](const LandmarkObs &a, const LandmarkObs &b) {
-    return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2));
+  auto squared_distance = [](const LandmarkObs &a, const LandmarkObs &b) {
+    // As we are interested only in which distance is _minimal_,
+    // the real value of the distance is irrelevant, and I just
+    // save sqrt computing time here.
+    return pow(a.x - b.x, 2) + pow(a.y - b.y, 2);
   };
-  for (const auto &landmark : predicted)
+  for (auto &observation : observations)
   {
-    double min_dist = std::numeric_limits<double>::max();
-    int closest_id = LandmarkObs::EMPTY_ID;
-    for (auto &observation : observations)
+    double min_squared_dist = std::numeric_limits<double>::max();
+    int    closest_id       = LandmarkObs::EMPTY_ID;
+    for (const auto &landmark : predicted)
     {
-      const auto dist = distance(landmark, observation);
-      cout << "Distance between " << landmark.toString() << " and " << observation.toString()
-           << " is " << dist << endl;
-      if (dist < min_dist)
+      const auto sq_dist = squared_distance(landmark, observation);
+      // cout << "Distance between " << landmark.toString() << " and " << observation.toString()
+      //     << " is " << sqrt(sq_dist) << endl;
+      if (sq_dist < min_squared_dist)
       {
-        min_dist       = dist;
-        observation.id = landmark.id;
-        closest_id = landmark.id;
+        min_squared_dist = sq_dist;
+        observation.id   = landmark.id;
+        closest_id       = landmark.id;
       }
     }
-    cout << "Closest is " << closest_id << " with distance " << min_dist << endl << endl;
+    // cout << "Closest is " << closest_id << " with distance " << sqrt(min_squared_dist) << endl
+    //     << endl;
   }
-  // As the default (empty) ID is guaranteed to be larger then any other,
-  // after the sorting the tail of this vector would contain unassociated
-  // pbservations.
-  std::sort(observations.begin(), observations.end(),
-            [](const LandmarkObs &a, const LandmarkObs &b) { return a.id < b.id; });
-  // If there are more observations, that landmarks, we discard all the rest.
-  const size_t length_diff = observations.size() - predicted.size();
-  if (length_diff > 0)
-  {
-    observations.erase(observations.begin() + long(length_diff), observations.end());
-  }
+
+  std::sort(observations.begin(), observations.end());
 }
 
 // Returns all landmarks that lies within the rectangular region,
@@ -163,11 +161,13 @@ vector<LandmarkObs> getLandmarksInRegion(const Map &map_landmarks, LandmarkObs t
   for (const auto &landmark : map_landmarks.landmark_list)
   {
     if (landmark.x_f >= float(top_left.x) && landmark.y_f <= float(top_left.y) &&
-        landmark.x_f <= float(bottom_right.x) && landmark.y_f <= float(bottom_right.y))
+        landmark.x_f <= float(bottom_right.x) && landmark.y_f >= float(bottom_right.y))
     {
       found.emplace_back(LandmarkObs{landmark.id_i, double(landmark.x_f), double(landmark.y_f)});
     }
   }
+  std::sort(found.begin(), found.end());
+
   return found;
 }
 
@@ -189,26 +189,28 @@ void ParticleFilter::updateWeights(double sensor_range, Sigmas std_landmark,
    *   (look at equation 3.33) http://planning.cs.uiuc.edu/node99.html
    */
 
-    // NOTE! This is incorrect, as the association was not performed.
+  // NOTE! This is incorrect, as the association was not performed.
   const auto gauss_norm{1. / 2 * M_PI * std_landmark.x * std_landmark.y};
-  const auto doubled_sig_square_x{2. * pow(std_landmark.x, 2.)};
-  const auto doubled_sig_square_y{2. * pow(std_landmark.y, 2.)};
+//  const auto doubled_sig_square_x{2. * pow(std_landmark.x, 2.)};
+//  const auto doubled_sig_square_y{2. * pow(std_landmark.y, 2.)};
+  const auto doubled_sig_square_x{2. * pow(0.3, 2.)};
+  const auto doubled_sig_square_y{2. * pow(0.3, 2.)};
+  double     weight_sum = 0.0;
   for (size_t i{0}; i < total_particles_; ++i)
   {
-    auto& particle = particles_[i];
+    auto &     particle = particles_[i];
     const auto x_part{particle.x};
     const auto y_part{particle.y};
     const auto cos_theta{cos(particle.theta)};
     const auto sin_theta{sin(particle.theta)};
 
-    LandmarkObs sensor_field_top_left {0, x_part - sensor_range, y_part + sensor_range};
-    LandmarkObs sensor_field_bot_right {0, x_part + sensor_range, y_part - sensor_range};
+    LandmarkObs sensor_field_top_left{0, x_part - sensor_range, y_part + sensor_range};
+    LandmarkObs sensor_field_bot_right{0, x_part + sensor_range, y_part - sensor_range};
 
     const auto predicted_landmarks =
         getLandmarksInRegion(map_landmarks, sensor_field_top_left, sensor_field_bot_right);
     vector<LandmarkObs> observations_on_map;
 
-    double weight = 1.0;
     for (const auto &observation : observations)
     {
       const auto x_obs{observation.x};
@@ -237,11 +239,35 @@ void ParticleFilter::updateWeights(double sensor_range, Sigmas std_landmark,
     // Associate
 
     // And now calculate particle's weight
-    /*      const auto x_variance   = pow((x_part + x_obs_on_map), 2.) / doubled_sig_square_x;
-      const auto y_variance   = pow((y_part + y_obs_on_map), 2.) / doubled_sig_square_y;
-      const auto obs_weight   = gauss_norm * exp(-1. * (x_variance + y_variance));
+    double weight = 1.0;
+    for (const auto &obs : observations_on_map)
+    {
+        cout << "Processing observation " << obs.toString() << endl;
+      auto found_lm =
+          std::lower_bound(predicted_landmarks.begin(), predicted_landmarks.end(), obs.id);
+      if (found_lm == predicted_landmarks.end())
+      {
+          cout << "ERR!" << endl;
+        continue;
+      }
+      cout << "Corresp. landmark: " << found_lm->toString() << endl;
+      const auto mu_x       = found_lm->x;
+      const auto mu_y       = found_lm->y;
+      const auto x_variance = pow((obs.x - mu_x), 2.) / doubled_sig_square_x;
+      const auto y_variance = pow((obs.y - mu_y), 2.) / doubled_sig_square_y;
+      const auto exponent   = -1. * (x_variance + y_variance);
+      const auto obs_weight = gauss_norm * exp(exponent);
       weight *= obs_weight;
-    */
+    }
+    cout << "Particle " << particles_[i].id << " weight " << weight << endl;
+    particles_[i].weight = weight;
+    weights_[i]          = weight;
+    weight_sum += weight;
+  }
+  // Normalize weights
+  for (auto &w : weights_)
+  {
+    w = w / weight_sum;
   }
 }
 
