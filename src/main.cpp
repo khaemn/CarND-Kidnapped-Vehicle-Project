@@ -11,7 +11,7 @@ using nlohmann::json;
 using std::string;
 using std::vector;
 
-static constexpr int PARTICLE_COUNT = 10;
+static constexpr int PARTICLE_COUNT = 3;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,

@@ -72,14 +72,14 @@ void ParticleFilter::predict(double delta_t, Sigmas sigmas, double velocity, dou
   std::default_random_engine gen;
   for (auto &particle : particles_)
   {
-    const auto d_thetha{delta_t * yaw_rate};
-    const auto old_thetha{particle.theta};
-    const auto new_thetha{old_thetha + d_thetha};
+    const auto d_theta{delta_t * yaw_rate};
+    const auto old_theta{particle.theta};
+    const auto new_theta{old_theta + d_theta};
     auto       new_x{particle.x};
     auto       new_y{particle.y};
 
-    const auto cos_new_thetha{cos(new_thetha)};
-    const auto sin_new_thetha{cos(new_thetha)};
+    const auto cos_new_thetha{cos(new_theta)};
+    const auto sin_new_thetha{sin(new_theta)};
 
     if (fabs(yaw_rate) <= 0.01)
     {
@@ -90,14 +90,14 @@ void ParticleFilter::predict(double delta_t, Sigmas sigmas, double velocity, dou
     }
     else
     {
-      const auto rotation{velocity * yaw_rate};
-      new_x += rotation * (sin_new_thetha - sin(old_thetha));
-      new_y += rotation * (cos(old_thetha) - cos_new_thetha);
+      const auto curve_coeff{velocity / yaw_rate};
+      new_x += curve_coeff * (sin_new_thetha - sin(old_theta));
+      new_y += curve_coeff * (cos(old_theta) - cos_new_thetha);
     }
 
     normal_distribution<double> dist_x(new_x, sigmas.x);
     normal_distribution<double> dist_y(new_y, sigmas.y);
-    normal_distribution<double> dist_theta(new_thetha, sigmas.theta);
+    normal_distribution<double> dist_theta(new_theta, sigmas.theta);
 
     particle.x     = dist_x(rnd_);
     particle.y     = dist_y(rnd_);
@@ -265,9 +265,10 @@ void ParticleFilter::updateWeights(double sensor_range, Sigmas std_landmark,
     weight_sum += weight;
   }
   // Normalize weights
-  for (auto &w : weights_)
+  for (size_t i{0}; i < total_particles_; ++i)
   {
-    w = w / weight_sum;
+    weights_[i] /= weight_sum;
+    particles_[i].weight = weights_[i];
   }
 }
 
