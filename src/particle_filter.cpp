@@ -100,7 +100,6 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs>  predicted,
   for (auto &observation : observations)
   {
     double min_squared_dist = std::numeric_limits<double>::max();
-    int    closest_id       = LandmarkObs::EMPTY_ID;
     for (const auto &landmark : predicted)
     {
       const auto sq_dist = squared_distance(landmark, observation);
@@ -108,7 +107,6 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs>  predicted,
       {
         min_squared_dist = sq_dist;
         observation.id   = landmark.id;
-        closest_id       = landmark.id;
       }
     }
   }

@@ -11,7 +11,7 @@ using nlohmann::json;
 using std::string;
 using std::vector;
 
-static constexpr int PARTICLE_COUNT = 50;
+static constexpr int PARTICLE_COUNT = 80;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -169,7 +169,6 @@ int main()
     msgJson["best_particle_sense_y"]      = filter.getSenseCoord(best_particle, "Y");
 
     auto msg = "42[\"best_particle\"," + msgJson.dump() + "]";
-    // std::cout << msg << std::endl;
     ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
   });  // end h.onMessage
 
