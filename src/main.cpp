@@ -11,7 +11,7 @@ using nlohmann::json;
 using std::string;
 using std::vector;
 
-static constexpr int PARTICLE_COUNT = 3;
+static constexpr int PARTICLE_COUNT = 50;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -41,12 +41,9 @@ int main()
   double sensor_range_m = 50;   // Sensor range [m]
 
   // GPS measurement uncertainty [x [m], y [m], theta [rad]]
-
-  // const Sigmas sigma_pos {0.3, 0.3, 0.01};
-        const Sigmas sigma_pos {0.03, 0.03, 0.0001};
+  const Sigmas sigma_pos {1.0, 1.0, 0.01};
   // Landmark measurement uncertainty [x [m], y [m]]
-  // const Sigmas sigma_landmark {0.3, 0.3, 0.0};
-        const Sigmas sigma_landmark {0.03, 0.03, 0.0};
+  const Sigmas sigma_landmark {0.3, 0.3, 0.0};
 
   // Read map data
   Map map;
@@ -55,13 +52,6 @@ int main()
     std::cout << "Error: Could not open map file" << std::endl;
     return -1;
   }
-//  // To speed up landmark search within the map, I sort them at least
-//  // by 'x' coordinate. It costs nothing in memory as the vector remains
-//  // the same, but allow a binary search at least in one direction.
-//  std::sort(map.landmark_list.begin(), map.landmark_list.end(),
-//            [](const Map::single_landmark_s &l, const Map::single_landmark_s &r) {
-//              return l.x_f < r.x_f;
-//            });
 
   ParticleFilter filter;
 
